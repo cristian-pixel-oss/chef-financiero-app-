@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * CHEF FINANCIERO — /invite/[token]
  * Página pública de aceptación de invitación.

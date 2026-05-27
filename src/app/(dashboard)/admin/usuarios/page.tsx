@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * CHEF FINANCIERO — /admin/usuarios
  * Gestión de usuarios del hotel. Solo accesible para role = 'admin'.
