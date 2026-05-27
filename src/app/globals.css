@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-gray-950 text-white antialiased;
+  }
+
+  * {
+    @apply border-gray-800;
+  }
+
+  /* Scrollbar personalizado */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
+  }
+}
+
+@layer components {
+  /* Semáforos del sistema */
+  .status-green  { @apply text-green-400 bg-green-400/10 border-green-500; }
+  .status-yellow { @apply text-amber-400 bg-amber-400/10 border-amber-400; }
+  .status-red    { @apply text-red-400   bg-red-400/10   border-red-500;   }
+
+  /* Tarjetas del dashboard */
+  .card {
+    @apply bg-gray-900 border border-gray-800 rounded-xl;
+  }
+
+  /* Input estándar */
+  .input {
+    @apply w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3
+           text-white placeholder-gray-500 focus:outline-none focus:ring-2
+           focus:ring-amber-400 focus:border-transparent transition;
+  }
+
+  /* Botón primario */
+  .btn-primary {
+    @apply bg-amber-400 hover:bg-amber-300 disabled:opacity-40
+           text-gray-900 font-semibold rounded-lg px-4 py-3 transition
+           focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2
+           focus:ring-offset-gray-900;
+  }
+
+  /* Botón secundario */
+  .btn-secondary {
+    @apply bg-gray-800 hover:bg-gray-700 disabled:opacity-40
+           text-white font-medium rounded-lg px-4 py-2.5 transition
+           border border-gray-700 focus:outline-none focus:ring-2
+           focus:ring-gray-500;
+  }
+}

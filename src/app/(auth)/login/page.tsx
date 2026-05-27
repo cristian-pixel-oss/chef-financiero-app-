@@ -1,0 +1,127 @@
+/**
+ * CHEF FINANCIERO — Página de Login
+ */
+
+'use client'
+
+import { useState }        from 'react'
+import { useRouter }       from 'next/navigation'
+import { useAuth }         from '@/hooks/useAuth'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const { signIn } = useAuth()
+
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await signIn(email, password)
+      router.refresh()          // sincroniza la sesión cookie con el middleware
+      router.push('/home')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+      <div className="w-full max-w-md">
+
+        {/* Logo / Marca */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            Chef <span className="text-amber-400">Financiero</span>
+          </h1>
+          <p className="text-gray-400 mt-2 text-sm">
+            Control de costos profesional para cocinas de hotel
+          </p>
+        </div>
+
+        {/* Formulario */}
+        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-2xl">
+          <h2 className="text-white text-xl font-semibold mb-6">Iniciar sesión</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="chef@hotel.com"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3
+                           text-white placeholder-gray-500 focus:outline-none focus:ring-2
+                           focus:ring-amber-400 focus:border-transparent transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                Contraseña
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3
+                           text-white placeholder-gray-500 focus:outline-none focus:ring-2
+                           focus:ring-amber-400 focus:border-transparent transition"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/40
+                         text-gray-900 font-semibold rounded-lg px-4 py-3 transition
+                         focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2
+                         focus:ring-offset-gray-900"
+            >
+              {loading ? 'Iniciando sesión...' : 'Entrar'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <a
+              href="/auth/forgot-password"
+              className="text-sm text-gray-400 hover:text-amber-400 transition"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+
+          <div className="mt-4 text-center">
+            <span className="text-sm text-gray-500">¿No tienes cuenta? </span>
+            <a
+              href="/auth/register"
+              className="text-sm text-amber-400 hover:text-amber-300 transition font-medium"
+            >
+              Regístrate
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
