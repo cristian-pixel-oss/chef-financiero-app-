@@ -25,10 +25,15 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
  * usan cast explícitos en sus valores de retorno, lo que proporciona la misma
  * seguridad de tipos sin conflictos con los genéricos del cliente.
  */
-export const supabase = createClientComponentClient({
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
-  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key',
-})
+function createSafeClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Si las vars no están disponibles en build time, devuelve stub vacío
+  if (!url || !key) return {} as ReturnType<typeof createClientComponentClient>
+  return createClientComponentClient({ supabaseUrl: url, supabaseKey: key })
+}
+
+export const supabase = createSafeClient()
 
 /**
  * Helper para obtener el usuario autenticado actual.
