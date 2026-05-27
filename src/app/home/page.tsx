@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic'
  * Pantalla completa con logo, botón de acceso y menú flotante con cards.
  */
 
-import { useEffect, useState, useRef } from 'react'
-import { useRouter, useSearchParams }  from 'next/navigation'
+import { useEffect, useState, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams }             from 'next/navigation'
 import { useAuth }                     from '@/hooks/useAuth'
 import { supabase }                    from '@/lib/supabase/client'
 import { getRoleLevel }                from '@/lib/roles'
@@ -61,7 +61,7 @@ function getGreeting(): string {
 
 // ─── Página ───────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+function HomeContent() {
   const { user, profile, loading } = useAuth()
   const router                     = useRouter()
   const searchParams               = useSearchParams()
@@ -308,5 +308,19 @@ export default function HomePage() {
         </div>
       )}
     </div>
+  )
+}
+
+const spinner = (
+  <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#080e1a' }}>
+    <div className="animate-spin h-10 w-10 rounded-full border-b-2 border-amber-400" />
+  </div>
+)
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={spinner}>
+      <HomeContent />
+    </Suspense>
   )
 }
