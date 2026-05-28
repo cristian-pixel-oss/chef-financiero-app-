@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }          from '@/lib/supabase/client'
+import { useAuth }           from '@/hooks/useAuth'
 import { upsertFoodOrder, getOccupancy, upsertOccupancy } from '@/services/costs.service'
 import { DG_EXCHANGE_RATE }  from '@/lib/constants'
 import type { Restaurant, DailyFoodOrderInsert } from '@/types/database.types'
@@ -79,9 +80,9 @@ function rowFromOrder(
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CostsPage() {
+  const { user, profile, loading: authLoading } = useAuth()
+
   const [date,        setDate]        = useState(todayStr())
-  const [hotelId,     setHotelId]     = useState('')
-  const [userId,      setUserId]      = useState('')
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
 
   // PAX global
@@ -95,27 +96,27 @@ export default function CostsPage() {
   // ALM rows
   const [rows, setRows] = useState<Record<string, RowState>>({})
 
+  // hotelId y userId se derivan del perfil cargado por useAuth
+  // (profiles.hotel_id es la forma correcta de vincular usuarios a hoteles)
+  const hotelId = profile?.hotel_id ?? ''
+  const userId  = user?.id          ?? ''
+
   // Estado de carga
   const [loading,    setLoading]    = useState(true)
   const [dayLoading, setDayLoading] = useState(false)
   const [pageError,  setPageError]  = useState<string | null>(null)
 
-  // ── 1. Hotel + usuario ──────────────────────────────────────────────────────
+  // ── Restaurantes ────────────────────────────────────────────────────────────
   useEffect(() => {
-    async function init() {
-      const [{ data: hotel }, { data: authData }] = await Promise.all([
-        supabase.from('hotels').select('id').eq('active', true).order('created_at').limit(1).single(),
-        supabase.auth.getUser(),
-      ])
-      if (hotel)          setHotelId((hotel as { id: string }).id)
-      if (authData?.user) setUserId(authData.user.id)
-    }
-    init()
-  }, [])
+    // Esperar a que termine la carga de auth
+    if (authLoading) return
 
-  // ── 2. Restaurantes ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!hotelId) return
+    // Si el perfil no tiene hotel_id, no hay datos que cargar
+    if (!hotelId) {
+      setLoading(false)
+      return
+    }
+
     supabase
       .from('restaurants')
       .select('*')
@@ -126,7 +127,7 @@ export default function CostsPage() {
         setRestaurants((data ?? []) as Restaurant[])
         setLoading(false)
       })
-  }, [hotelId])
+  }, [hotelId, authLoading])
 
   // ── 3. Cargar datos del día ──────────────────────────────────────────────────
   const loadDay = useCallback(async () => {
@@ -260,10 +261,25 @@ export default function CostsPage() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-screen bg-gray-950">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
+      </div>
+    )
+  }
+
+  if (!hotelId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-950 px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">🏨</p>
+          <h2 className="text-white font-semibold text-lg mb-2">Sin hotel asignado</h2>
+          <p className="text-gray-400 text-sm">
+            Tu cuenta no está vinculada a ningún hotel. Contacta al administrador
+            para que configure tu acceso.
+          </p>
+        </div>
       </div>
     )
   }

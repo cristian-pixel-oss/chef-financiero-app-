@@ -80,15 +80,16 @@ function HomeContent() {
   }, [user, loading, router])
 
   useEffect(() => {
-    if (!user) return
+    // Usar profile.hotel_id (asociación real usuario→hotel)
+    // en lugar de hotels.user_id (que sólo coincide con el creador del hotel)
+    if (!profile?.hotel_id) return
     supabase
       .from('hotels')
       .select('name')
-      .eq('user_id', user.id)
-      .eq('active', true)
+      .eq('id', profile.hotel_id)
       .single()
       .then(({ data }) => { if (data?.name) setHotelName(data.name) })
-  }, [user])
+  }, [profile?.hotel_id])
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
