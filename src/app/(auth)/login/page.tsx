@@ -6,18 +6,29 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState }        from 'react'
-import { useRouter }       from 'next/navigation'
-import { useAuth }         from '@/hooks/useAuth'
+import { useState, useEffect } from 'react'
+import { useRouter }           from 'next/navigation'
+import { useAuth }             from '@/hooks/useAuth'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { signIn } = useAuth()
+  const router               = useRouter()
+  const { user, loading: authLoading, signIn } = useAuth()
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
+
+  /**
+   * Si el usuario ya tiene sesión activa (por ejemplo, llegó desde un link de
+   * verificación de email que pone #access_token= en la URL, o tenía sesión
+   * guardada en cookies), redirigir directamente a /home sin mostrar el form.
+   */
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/home')
+    }
+  }, [user, authLoading, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,11 +39,30 @@ export default function LoginPage() {
       // replace() en vez de push() para que el botón "atrás" no regrese al login
       router.replace('/home')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      // Extrae el mensaje tanto de Error instances como de objetos planos (ej. stub)
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof (err as { message?: unknown })?.message === 'string'
+            ? (err as { message: string }).message
+            : 'Error al iniciar sesión'
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
+
+  // Mientras se verifica si hay sesión activa, mostrar spinner
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-amber-400" />
+      </div>
+    )
+  }
+
+  // Si ya hay usuario, el useEffect lo redirige — no renderizar el form
+  if (user) return null
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">

@@ -65,15 +65,21 @@ export function useAuth() {
 
   /**
    * Login con email y contraseña.
-   * Lanza error si Supabase no devuelve un usuario (credenciales incorrectas
-   * o cliente no inicializado por falta de env vars).
+   * Lanza siempre una instancia de Error (no un objeto plano) para que el
+   * catch del componente pueda extraer err.message con instanceof Error.
    */
   async function signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
-    if (error) throw error
+    if (error) {
+      // error puede ser AuthApiError (tiene .message) o un objeto plano (stub)
+      const msg = typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'Error al iniciar sesión'
+      throw new Error(msg)
+    }
     if (!data?.user) throw new Error('No se pudo iniciar sesión. Verifica tus credenciales.')
     return data
   }
