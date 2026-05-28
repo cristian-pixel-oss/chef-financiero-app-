@@ -1,34 +1,83 @@
 /**
  * CHEF FINANCIERO — Página de Login
+ *
+ * Flujo de autenticación:
+ *  1. Al montar, suscribe a onAuthStateChange para detectar sesiones que
+ *     lleguen del #access_token del magic link / verificación de email.
+ *  2. También llama a getSession() para sesiones ya guardadas en cookies.
+ *  3. Mientras se verifica muestra un spinner (checkingSession = true) para
+ *     que el formulario nunca aparezca durante el procesamiento del token.
+ *  4. Cuando detecta sesión → router.replace('/home') sin pasar por el form.
+ *  5. Solo si no hay sesión → muestra el formulario de email + contraseña.
  */
 
 'use client'
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
-import { useRouter }           from 'next/navigation'
-import { useAuth }             from '@/hooks/useAuth'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter }                   from 'next/navigation'
+import { useAuth }                     from '@/hooks/useAuth'
+import { supabase }                    from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const router               = useRouter()
-  const { user, loading: authLoading, signIn } = useAuth()
+  const router          = useRouter()
+  const { signIn }      = useAuth()
+  const redirectedRef   = useRef(false)   // evita doble redirect en StrictMode
 
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+  const [email, setEmail]             = useState('')
+  const [password, setPassword]       = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState<string | null>(null)
 
   /**
-   * Si el usuario ya tiene sesión activa (por ejemplo, llegó desde un link de
-   * verificación de email que pone #access_token= en la URL, o tenía sesión
-   * guardada en cookies), redirigir directamente a /home sin mostrar el form.
+   * checkingSession empieza en true para mostrar spinner mientras Supabase
+   * procesa el #access_token= del hash. Pasa a false solo cuando se confirma
+   * que no existe sesión activa.
    */
+  const [checkingSession, setCheckingSession] = useState(true)
+
   useEffect(() => {
-    if (!authLoading && user) {
-      router.replace('/home')
+    let active = true
+
+    function redirectToHome() {
+      if (!redirectedRef.current && active) {
+        redirectedRef.current = true
+        router.replace('/home')
+      }
     }
-  }, [user, authLoading, router])
+
+    // ── 1. onAuthStateChange ──────────────────────────────────────────────
+    // Escucha cualquier evento de auth: sesión restaurada desde cookies,
+    // SIGNED_IN después de procesar #access_token= (magic link / email conf.),
+    // TOKEN_REFRESHED, etc.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          redirectToHome()
+        }
+      }
+    )
+
+    // ── 2. getSession() ───────────────────────────────────────────────────
+    // Obtiene la sesión actual (cookies o #access_token= ya procesado).
+    // Cuando resuelve sin sesión, oculta el spinner y muestra el form.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return
+      if (session) {
+        redirectToHome()
+      } else {
+        setCheckingSession(false)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [router])
+
+  // ─── Submit del formulario manual ────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,10 +85,9 @@ export default function LoginPage() {
     setError(null)
     try {
       await signIn(email, password)
-      // replace() en vez de push() para que el botón "atrás" no regrese al login
       router.replace('/home')
     } catch (err) {
-      // Extrae el mensaje tanto de Error instances como de objetos planos (ej. stub)
+      // Extrae el mensaje tanto de Error instances como de objetos planos
       const msg =
         err instanceof Error
           ? err.message
@@ -52,17 +100,16 @@ export default function LoginPage() {
     }
   }
 
-  // Mientras se verifica si hay sesión activa, mostrar spinner
-  if (authLoading) {
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  // Spinner mientras se verifica la sesión (cubre el procesamiento del hash)
+  if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
         <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-amber-400" />
       </div>
     )
   }
-
-  // Si ya hay usuario, el useEffect lo redirige — no renderizar el form
-  if (user) return null
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
