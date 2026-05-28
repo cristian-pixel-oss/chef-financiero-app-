@@ -25,8 +25,8 @@ export default function LoginPage() {
     setError(null)
     try {
       await signIn(email, password)
-      router.refresh()          // sincroniza la sesión cookie con el middleware
-      router.push('/home')
+      // replace() en vez de push() para que el botón "atrás" no regrese al login
+      router.replace('/home')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
     } finally {

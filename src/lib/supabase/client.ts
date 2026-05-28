@@ -18,14 +18,14 @@ type Client = ReturnType<typeof createClientComponentClient>
 /**
  * Stub seguro para cuando las env vars no están disponibles en el bundle.
  *
- * Devuelve sesión/usuario nulos (sin lanzar TypeError) para que la app
- * muestre la pantalla de login en lugar de romperse con un crash.
- * Los métodos de .from() nunca se llaman en este estado porque todos los
- * useEffect que los usan tienen un guard  `if (!user) return`.
+ * - getSession / getUser retornan null sin crash → la app muestra el login.
+ * - signInWithPassword / signUp retornan un error EXPLÍCITO para que el
+ *   formulario de login muestre un mensaje en lugar de navegar sin sesión
+ *   y causar el loop: /login → /home → /login.
+ * - Los métodos .from() nunca se invocan aquí: los useEffect guardan con
+ *   `if (!user) return` antes de llamarlos.
  */
 function buildStub(): Client {
-  const nil = async () => ({ data: null, error: null })
-
   if (typeof window !== 'undefined') {
     console.error(
       '[Chef Financiero] NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY ' +
@@ -35,16 +35,23 @@ function buildStub(): Client {
     )
   }
 
+  const configErr = {
+    name:    'AuthApiError',
+    message: 'Supabase no configurado. Contacta al administrador ' +
+             '(faltan NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).',
+    status:  500,
+  }
+
   return {
     auth: {
-      getSession:            async () => ({ data: { session: null },    error: null }),
-      getUser:               async () => ({ data: { user: null },       error: null }),
+      getSession:            async () => ({ data: { session: null },              error: null      }),
+      getUser:               async () => ({ data: { user: null },                 error: null      }),
       onAuthStateChange:     ()      => ({ data: { subscription: { unsubscribe: () => {}, id: 'stub' } } }),
-      signInWithPassword:    nil,
-      signUp:                nil,
-      signOut:               nil,
-      resetPasswordForEmail: nil,
-      updateUser:            nil,
+      signInWithPassword:    async () => ({ data: { user: null, session: null }, error: configErr }),
+      signUp:                async () => ({ data: { user: null, session: null }, error: configErr }),
+      signOut:               async () => ({ error: null }),
+      resetPasswordForEmail: async () => ({ data: {},                            error: configErr }),
+      updateUser:            async () => ({ data: { user: null },                error: configErr }),
     },
   } as unknown as Client
 }

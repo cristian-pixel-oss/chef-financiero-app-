@@ -65,6 +65,8 @@ export function useAuth() {
 
   /**
    * Login con email y contraseña.
+   * Lanza error si Supabase no devuelve un usuario (credenciales incorrectas
+   * o cliente no inicializado por falta de env vars).
    */
   async function signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -72,6 +74,7 @@ export function useAuth() {
       password,
     })
     if (error) throw error
+    if (!data?.user) throw new Error('No se pudo iniciar sesión. Verifica tus credenciales.')
     return data
   }
 
