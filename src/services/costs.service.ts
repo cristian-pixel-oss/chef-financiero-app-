@@ -201,8 +201,22 @@ export async function getMonthlySummaryByRestaurant(
 
   if (error) throw error
 
+  // Tipo explícito para el acumulador — necesario para que TS acepte el spread
+  type GroupedRow = {
+    restaurant_id:    string
+    restaurant_name:  string
+    restaurant_type:  string | null
+    total_viveres_rd: number
+    total_nevera_rd:  number
+    total_extras_rd:  number
+    total_rd:         number
+    total_budget_rd:  number
+    total_pax:        number
+    days_count:       number
+  }
+
   // Agrupa por restaurante
-  const grouped = (data ?? []).reduce(
+  const grouped = (data ?? []).reduce<Record<string, GroupedRow>>(
     (acc, row) => {
       const key = row.restaurant_id
       if (!acc[key]) {
@@ -228,21 +242,10 @@ export async function getMonthlySummaryByRestaurant(
       acc[key].days_count       += 1
       return acc
     },
-    {} as Record<string, {
-      restaurant_id: string
-      restaurant_name: string
-      restaurant_type: string | null
-      total_viveres_rd: number
-      total_nevera_rd:  number
-      total_extras_rd:  number
-      total_rd:         number
-      total_budget_rd:  number
-      total_pax:        number
-      days_count:       number
-    }>
+    {}
   )
 
-  return Object.values(grouped).map((r) => ({
+  return (Object.values(grouped) as GroupedRow[]).map((r) => ({
     ...r,
     variance_rd:      r.total_rd - r.total_budget_rd,
     cost_per_pax_rd:  r.total_pax > 0 ? r.total_rd / r.total_pax : 0,
