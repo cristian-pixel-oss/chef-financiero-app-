@@ -27,6 +27,7 @@ export default function LoginPage() {
 
   const [email, setEmail]             = useState('')
   const [password, setPassword]       = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]         = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -150,16 +151,28 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
                 Contraseña
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3
-                           text-white placeholder-gray-500 focus:outline-none focus:ring-2
-                           focus:ring-amber-400 focus:border-transparent transition"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 pr-11
+                             text-white placeholder-gray-500 focus:outline-none focus:ring-2
+                             focus:ring-amber-400 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400
+                             hover:text-amber-400 transition"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
 
             {error && (
