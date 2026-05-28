@@ -21,9 +21,17 @@ import { useAuth }                     from '@/hooks/useAuth'
 import { supabase }                    from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const router          = useRouter()
-  const { signIn }      = useAuth()
-  const redirectedRef   = useRef(false)   // evita doble redirect en StrictMode
+  const router        = useRouter()
+  const { signIn }    = useAuth()
+  const redirectedRef = useRef(false)   // evita doble redirect en StrictMode
+
+  // Banner de éxito cuando llega desde /auth/reset-password con ?reset=1
+  // Leído con window.location para no necesitar Suspense (es 'use client' + force-dynamic)
+  const [passwordReset, setPasswordReset] = useState(false)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setPasswordReset(params.get('reset') === '1')
+  }, [])
 
   const [email, setEmail]             = useState('')
   const [password, setPassword]       = useState('')
@@ -125,6 +133,16 @@ export default function LoginPage() {
             Control de costos profesional para cocinas de hotel
           </p>
         </div>
+
+        {/* Banner: contraseña reseteada */}
+        {passwordReset && (
+          <div className="bg-green-900/30 border border-green-700 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+            <span className="text-green-400 text-lg shrink-0">✅</span>
+            <p className="text-green-300 text-sm">
+              Contraseña actualizada correctamente. Ya puedes iniciar sesión.
+            </p>
+          </div>
+        )}
 
         {/* Formulario */}
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-2xl">
