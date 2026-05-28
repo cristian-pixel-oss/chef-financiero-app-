@@ -8,7 +8,7 @@ export type RoleLevel = 'admin' | 'premium' | 'standard'
 
 /** Normaliza cualquier role string al nivel canónico */
 export function getRoleLevel(role: string | null | undefined): RoleLevel {
-  if (role === 'admin')                    return 'admin'
+  if (role === 'admin' || role === 'super_admin') return 'admin'
   if (role === 'premium' || role === 'director') return 'premium'
   return 'standard'   // chef, standard, o cualquier otro
 }
