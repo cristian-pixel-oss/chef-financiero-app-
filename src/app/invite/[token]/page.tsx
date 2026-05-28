@@ -76,15 +76,32 @@ export default function InvitePage() {
       })
       if (signUpError) throw signUpError
 
-      const userId = data.user?.id
-      if (!userId) throw new Error('No se pudo crear el usuario')
+      // Detectar "email ya existe": Supabase devuelve éxito con identities vacías
+      // en lugar de error cuando email confirmation está activado
+      if (!data.user || (data.user.identities?.length ?? 0) === 0) {
+        throw new Error(
+          'Este correo ya tiene una cuenta registrada. Si fuiste eliminado recientemente, ' +
+          'espera unos minutos o revisa que no quede un perfil huérfano en la base de datos.'
+        )
+      }
+
+      const userId = data.user.id
 
       // 2. Completar perfil + marcar invitación como usada (SECURITY DEFINER)
       await completeInvitation(token, userId)
 
       setPageState('success')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Error al registrarse')
+      // Extraer mensaje de cualquier tipo: Error nativo, PostgrestError, AuthApiError, etc.
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Error desconocido al registrarse'
+
+      console.error('[InvitePage] Error en registro:', err)
+      setFormError(message)
     } finally {
       setSubmitting(false)
     }
