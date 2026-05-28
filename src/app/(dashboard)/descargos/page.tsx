@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }                          from '@/lib/supabase/client'
+import { useHotelId }                        from '@/hooks/useHotelId'
 import {
   getDescargosByDate,
   upsertDescargo,
@@ -60,12 +61,11 @@ export default function DescargosPage() {
   // ── Estado base ───────────────────────────────────────────────────────────
   const [date,         setDate]         = useState(today)
   const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
-  const [hotelId,      setHotelId]      = useState('')
+  const { hotelId, hotelLoading } = useHotelId()
   const [userId,       setUserId]       = useState('')
 
   // ── Datos ─────────────────────────────────────────────────────────────────
   const [rows,         setRows]         = useState<RestaurantRow[]>([])
-  const [hotelLoading, setHotelLoading] = useState(true)
   const [loading,      setLoading]      = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [error,        setError]        = useState<string | null>(null)
@@ -77,19 +77,11 @@ export default function DescargosPage() {
   const [distMode,         setDistMode]         = useState<'prop' | 'one' | null>(null)
   const [distributing,     setDistributing]     = useState(false)
 
-  // ── Init hotel/usuario ────────────────────────────────────────────────────
+  // ── Init usuario ──────────────────────────────────────────────────────────
   useEffect(() => {
-    async function init() {
-      const [{ data: hotel }, { data: authData }] = await Promise.all([
-        supabase.from('hotels').select('id').eq('active', true)
-          .order('created_at').limit(1).single(),
-        supabase.auth.getUser(),
-      ])
-      if (hotel)          setHotelId((hotel as { id: string }).id)
+    supabase.auth.getUser().then(({ data: authData }) => {
       if (authData?.user) setUserId(authData.user.id)
-      setHotelLoading(false)
-    }
-    init()
+    })
   }, [])
 
   // ── Cargar restaurantes + descargos + gasto real del día ──────────────────

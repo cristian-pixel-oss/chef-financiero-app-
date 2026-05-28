@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase }              from '@/lib/supabase/client'
+import { useHotelId }            from '@/hooks/useHotelId'
 import { upsertProteinOrder, deleteProteinOrder } from '@/services/proteins.service'
 import type { Product, Restaurant } from '@/types/database.types'
 
@@ -64,7 +65,7 @@ export default function ProteinsPage() {
   // ── Estado principal
   const [date,        setDate]        = useState(today)
   const [activeTab,   setActiveTab]   = useState<'proteina' | 'vegetal'>('proteina')
-  const [hotelId,     setHotelId]     = useState('')
+  const { hotelId, hotelLoading: loadingHotel } = useHotelId()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [products,    setProducts]    = useState<Product[]>([])
 
@@ -73,44 +74,32 @@ export default function ProteinsPage() {
   const [originalOrders, setOriginalOrders] = useState<Set<string>>(new Set())
 
   // ── Estado de UI
-  const [loadingHotel, setLoadingHotel] = useState(true)
   const [loadingData,  setLoadingData]  = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [savedAt,      setSavedAt]      = useState<Date | null>(null)
   const [error,        setError]        = useState<string | null>(null)
 
-  // ── 1. Cargar hotel y restaurantes (una sola vez)
+  // ── 1. Cargar restaurantes cuando hotelId esté listo
   useEffect(() => {
+    if (!hotelId) return
     let cancelled = false
     async function init() {
       try {
-        const { data: hotel, error: hErr } = await supabase
-          .from('hotels')
-          .select('id')
-          .eq('active', true)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .single()
-        if (hErr || !hotel || cancelled) { setLoadingHotel(false); return }
-        setHotelId(hotel.id)
-
         const { data: rests, error: rErr } = await supabase
           .from('restaurants')
           .select('*')
-          .eq('hotel_id', hotel.id)
+          .eq('hotel_id', hotelId)
           .eq('active', true)
           .order('sort_order', { ascending: true })
         if (rErr) throw rErr
         if (!cancelled) setRestaurants((rests ?? []) as Restaurant[])
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Error cargando hotel')
-      } finally {
-        if (!cancelled) setLoadingHotel(false)
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Error cargando restaurantes')
       }
     }
     init()
     return () => { cancelled = true }
-  }, [])
+  }, [hotelId])
 
   // ── 2. Cargar productos cuando cambia la pestaña o el hotel
   useEffect(() => {

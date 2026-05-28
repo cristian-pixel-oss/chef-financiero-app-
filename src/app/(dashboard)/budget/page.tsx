@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
  */
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { supabase }    from '@/lib/supabase/client'
+import { useHotelId }  from '@/hooks/useHotelId'
 import { DG_BUDGET_RD_PAX, DG_BUDGET_USD_PAX, DG_EXCHANGE_RATE } from '@/lib/constants'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ export default function BudgetPage() {
 
   const [year,    setYear]    = useState(now.getFullYear())
   const [month,   setMonth]   = useState(now.getMonth() + 1)
-  const [hotelId, setHotelId] = useState('')
+  const { hotelId, hotelLoading } = useHotelId()
   const [userId,  setUserId]  = useState('')
   const [data,    setData]    = useState<RestaurantBudget[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,18 +55,12 @@ export default function BudgetPage() {
   const [saveMsg,    setSaveMsg]    = useState<string | null>(null)
   const [loadingPrev, setLoadingPrev] = useState(false)
 
-  // ── Obtener hotel y usuario ───────────────────────────────────────────────────
+  // ── Obtener usuario actual ────────────────────────────────────────────────────
   useEffect(() => {
-    async function init() {
-      const [{ data: hotel }, { data: authData }] = await Promise.all([
-        supabase.from('hotels').select('id').eq('active', true).order('created_at').limit(1).single(),
-        supabase.auth.getUser(),
-      ])
-      if (hotel)          setHotelId((hotel as { id: string }).id)
+    supabase.auth.getUser().then(({ data: authData }) => {
       if (authData?.user) setUserId(authData.user.id)
       else                setLoading(false)
-    }
-    init()
+    })
   }, [])
 
   // ── Cargar presupuestos cuando cambia hotel / mes / año ───────────────────────

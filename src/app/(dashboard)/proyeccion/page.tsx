@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase }            from '@/lib/supabase/client'
+import { useHotelId }          from '@/hooks/useHotelId'
 import {
   getPeriodStats,
   getConsolidatedMonthlyProjection,
@@ -74,7 +75,7 @@ export default function ProyeccionPage() {
   const lastDay = new Date(year, month, 0).getDate()
 
   // ── Estado ────────────────────────────────────────────────────────────────
-  const [hotelId, setHotelId] = useState('')
+  const { hotelId } = useHotelId()
   const [ps,      setPs]      = useState<PeriodSummary | null>(null)
   const [monthly, setMonthly] = useState<MonthlyProjectionRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -82,20 +83,6 @@ export default function ProyeccionPage() {
 
   // PAX por día (valor como string para el <input>)
   const [paxByDate, setPaxByDate] = useState<Record<string, string>>({})
-
-  // Cargar hotel
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase
-        .from('hotels')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('active', true)
-        .single()
-        .then(({ data }) => { if (data) setHotelId(data.id) })
-    })
-  }, [])
 
   // Cargar datos del mes en curso
   useEffect(() => {

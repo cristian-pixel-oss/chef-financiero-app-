@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }                          from '@/lib/supabase/client'
+import { useHotelId }                        from '@/hooks/useHotelId'
 import {
   getPeriodStats,
   type PeriodSummary,
@@ -141,28 +142,12 @@ export default function DashboardPage() {
   const [endDate,      setEndDate]      = useState(today)
   const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
 
-  const [hotelId,      setHotelId]      = useState('')
-  const [hotelName,    setHotelName]    = useState('')
-  const [hotelLoading, setHotelLoading] = useState(true)
+  const { hotelId, hotelName, hotelLoading } = useHotelId()
 
   const [periodStats,  setPeriodStats]  = useState<PeriodSummary | null>(null)
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState<string | null>(null)
 
-  // ── Cargar hotel ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase
-      .from('hotels')
-      .select('id, name')
-      .eq('active', true)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) { setHotelId(data.id); setHotelName(data.name) }
-        setHotelLoading(false)
-      })
-  }, [])
 
   // ── Cargar datos ──────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
