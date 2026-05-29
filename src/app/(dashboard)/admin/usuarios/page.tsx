@@ -56,12 +56,13 @@ export default function AdminUsuariosPage() {
   const [error,     setError]     = useState<string | null>(null)
 
   // Modal invitación
-  const [showModal,  setShowModal]  = useState(false)
-  const [invEmail,   setInvEmail]   = useState('')
-  const [invRole,    setInvRole]    = useState<InviteRole>('standard')
-  const [inviting,   setInviting]   = useState(false)
-  const [inviteLink, setInviteLink] = useState('')
-  const [invError,   setInvError]   = useState<string | null>(null)
+  const [showModal,   setShowModal]   = useState(false)
+  const [invEmail,    setInvEmail]    = useState('')
+  const [invRole,     setInvRole]     = useState<InviteRole>('standard')
+  const [inviting,    setInviting]    = useState(false)
+  const [inviteLink,  setInviteLink]  = useState('')
+  const [emailSent,   setEmailSent]   = useState(false)
+  const [invError,    setInvError]    = useState<string | null>(null)
 
   // Confirmación desactivar
   const [confirmDeactivate, setConfirmDeactivate] = useState<string | null>(null)
@@ -122,9 +123,32 @@ export default function AdminUsuariosPage() {
     setInviting(true)
     setInvError(null)
     try {
-      const inv = await createInvitation(hotelId, invEmail, invRole, user.id)
+      // 1. Crear invitación en la DB
+      const inv  = await createInvitation(hotelId, invEmail, invRole, user.id)
       const link = `${window.location.origin}/invite/${inv.token}`
       setInviteLink(link)
+
+      // 2. Enviar email automáticamente vía Resend
+      const res = await fetch('/api/send-invitation', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:         invEmail,
+          inviteUrl:     link,
+          hotelName:     hotelName,
+          role:          invRole,
+          invitedByName: profile?.full_name ?? 'El administrador',
+        }),
+      })
+
+      if (res.ok) {
+        setEmailSent(true)
+      } else {
+        // El link se creó pero el email falló: avisar sin bloquear
+        const data = await res.json().catch(() => ({}))
+        console.warn('[handleInvite] Email no enviado:', data?.error)
+        setEmailSent(false)
+      }
     } catch (err) {
       setInvError(err instanceof Error ? err.message : 'Error al crear invitación')
     } finally {
@@ -192,7 +216,7 @@ export default function AdminUsuariosPage() {
           )}
         </div>
         <button
-          onClick={() => { setShowModal(true); setInviteLink(''); setInvEmail(''); setInvError(null) }}
+          onClick={() => { setShowModal(true); setInviteLink(''); setInvEmail(''); setInvError(null); setEmailSent(false) }}
           disabled={!canInvite}
           className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
             canInvite
@@ -379,13 +403,27 @@ export default function AdminUsuariosPage() {
               {/* Si ya se generó el link */}
               {inviteLink ? (
                 <div className="space-y-4">
-                  <div className="bg-green-900/30 border border-green-700/50 rounded-xl px-4 py-3">
-                    <p className="text-green-400 text-sm font-semibold mb-1">✓ Invitación creada</p>
-                    <p className="text-gray-400 text-xs">
-                      Comparte este link con <strong className="text-white">{invEmail}</strong>:
-                    </p>
-                  </div>
 
+                  {/* Estado del email */}
+                  {emailSent ? (
+                    <div className="bg-green-900/30 border border-green-700/50 rounded-xl px-4 py-3">
+                      <p className="text-green-400 text-sm font-semibold mb-1">✉ Email enviado</p>
+                      <p className="text-gray-400 text-xs">
+                        Enviamos la invitación a <strong className="text-white">{invEmail}</strong>.
+                        También puedes compartir el link manualmente:
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3">
+                      <p className="text-amber-400 text-sm font-semibold mb-1">✓ Invitación creada</p>
+                      <p className="text-gray-400 text-xs">
+                        No se pudo enviar el email automáticamente. Comparte el link manualmente
+                        con <strong className="text-white">{invEmail}</strong>:
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Link copiable */}
                   <div className="bg-gray-800 rounded-xl px-3 py-2.5 flex items-center gap-2">
                     <p className="text-gray-300 text-xs truncate flex-1 font-mono">{inviteLink}</p>
                     <button
@@ -407,6 +445,7 @@ export default function AdminUsuariosPage() {
                     onClick={() => {
                       setShowModal(false)
                       setInviteLink('')
+                      setEmailSent(false)
                       loadData()
                     }}
                     className="w-full py-2.5 rounded-xl bg-amber-400 text-gray-900 text-sm font-semibold hover:bg-amber-300 transition"
@@ -472,7 +511,7 @@ export default function AdminUsuariosPage() {
                         : 'bg-amber-400 text-gray-900 hover:bg-amber-300'
                     }`}
                   >
-                    {inviting ? 'Generando link…' : 'Generar link de invitación'}
+                    {inviting ? 'Enviando invitación…' : '✉ Enviar invitación por email'}
                   </button>
                 </form>
               )}
