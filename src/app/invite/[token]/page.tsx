@@ -148,7 +148,9 @@ export default function InvitePage() {
             <div className="text-5xl mb-4">🎉</div>
             <h2 className="text-white text-xl font-semibold mb-2">¡Bienvenido a Chef Financiero!</h2>
             <p className="text-gray-400 text-sm mb-2">
-              Tu cuenta ha sido creada y tienes acceso a{' '}
+              Tu cuenta ha sido creada con rol{' '}
+              <strong className="text-amber-400">{getRoleLabel(invitation?.role)}</strong>
+              {' '}y tienes acceso a{' '}
               <strong className="text-white">{invitation?.hotel_name}</strong>.
             </p>
             {/* Si confirmación de email está activada en Supabase, mostrar aviso */}
