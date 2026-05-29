@@ -1,15 +1,20 @@
 /**
  * CHEF FINANCIERO — Página de Reset Password
  *
- * Flujo:
- *  1. Supabase redirige aquí desde el email de recuperación con #access_token= en el hash.
- *  2. onAuthStateChange detecta el evento PASSWORD_RECOVERY y habilita el formulario.
- *  3. El usuario ingresa y confirma la nueva contraseña.
- *  4. Se llama supabase.auth.updateUser({ password }) para guardar el cambio.
- *  5. Se hace sign-out y se redirige a /login con ?reset=1 para mostrar confirmación.
+ * Maneja DOS flujos que Supabase usa según la configuración del proyecto:
  *
- *  Si el token es inválido / expirado (no llega PASSWORD_RECOVERY en ~2s),
- *  se muestra un estado de error con enlace de reintento.
+ * FLUJO A — PKCE (proyectos nuevos, por defecto):
+ *   El email redirige a: /auth/reset-password?code=XXXX
+ *   → Detectamos ?code= en la URL, llamamos exchangeCodeForSession(code),
+ *     limpiamos la URL y mostramos el formulario.
+ *
+ * FLUJO B — Legacy / Implicit (proyectos anteriores):
+ *   El email redirige a: /auth/reset-password#access_token=XXX&type=recovery
+ *   → Supabase JS detecta el hash automáticamente y dispara el evento
+ *     PASSWORD_RECOVERY en onAuthStateChange.
+ *
+ * Al guardar la nueva contraseña:
+ *   supabase.auth.updateUser({ password }) → signOut() → redirect /login?reset=1
  */
 
 'use client'
@@ -25,48 +30,82 @@ type PageState = 'checking' | 'form' | 'invalid' | 'success'
 export default function ResetPasswordPage() {
   const router = useRouter()
 
-  const [pageState,     setPageState]     = useState<PageState>('checking')
-  const [password,      setPassword]      = useState('')
-  const [confirm,       setConfirm]       = useState('')
-  const [showPassword,  setShowPassword]  = useState(false)
-  const [showConfirm,   setShowConfirm]   = useState(false)
-  const [loading,       setLoading]       = useState(false)
-  const [error,         setError]         = useState<string | null>(null)
+  const [pageState,    setPageState]    = useState<PageState>('checking')
+  const [password,     setPassword]     = useState('')
+  const [confirm,      setConfirm]      = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm,  setShowConfirm]  = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
 
-  // Evita race conditions: true en cuanto PASSWORD_RECOVERY haya sido procesado
   const recoveryHandled = useRef(false)
 
-  // ── Detectar evento PASSWORD_RECOVERY ─────────────────────────────────────
+  // ── Detectar token / code al montar ───────────────────────────────────────
   useEffect(() => {
     let active = true
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return
+    async function init() {
+      // ── FLUJO A: PKCE — ?code= en la query string ─────────────────────────
+      const params = new URLSearchParams(window.location.search)
+      const code   = params.get('code')
 
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        // Token válido: mostrar formulario
-        recoveryHandled.current = true
-        setPageState('form')
-      } else if (event === 'SIGNED_IN' && session && !recoveryHandled.current) {
-        // Usuario ya autenticado que entró a esta URL manualmente
-        router.replace('/home')
+      if (code) {
+        try {
+          const { error: exchangeError } = await (supabase.auth as any)
+            .exchangeCodeForSession(code)
+
+          if (exchangeError) throw exchangeError
+
+          if (!active) return
+          recoveryHandled.current = true
+          setPageState('form')
+          // Limpiar ?code de la URL para que una recarga no intente reusar el código
+          window.history.replaceState({}, '', window.location.pathname)
+        } catch (err) {
+          console.error('[ResetPassword] Error intercambiando code:', err)
+          if (active) setPageState('invalid')
+        }
+        return
       }
-    })
 
-    // Fallback: si después de 2 s no llegó PASSWORD_RECOVERY → token inválido/expirado
-    const timer = setTimeout(() => {
-      if (!active || recoveryHandled.current) return
-      setPageState('invalid')
-    }, 2000)
+      // ── FLUJO B: Legacy — #access_token en el hash ────────────────────────
+      // onAuthStateChange dispara PASSWORD_RECOVERY cuando el cliente Supabase
+      // detecta el hash con type=recovery.
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (!active) return
+
+          if (event === 'PASSWORD_RECOVERY' && session) {
+            recoveryHandled.current = true
+            setPageState('form')
+          } else if (event === 'SIGNED_IN' && session && !recoveryHandled.current) {
+            // Usuario ya autenticado que llegó aquí sin token → redirigir
+            router.replace('/home')
+          }
+        }
+      )
+
+      // Fallback: si en 5 s no llegó ningún evento válido → token expirado/inválido
+      const timer = setTimeout(() => {
+        if (!active || recoveryHandled.current) return
+        setPageState('invalid')
+      }, 5000)
+
+      return () => {
+        subscription.unsubscribe()
+        clearTimeout(timer)
+      }
+    }
+
+    const cleanup = init()
 
     return () => {
       active = false
-      subscription.unsubscribe()
-      clearTimeout(timer)
+      cleanup.then((fn) => fn?.())
     }
   }, [router])
 
-  // ── Validación y envío ─────────────────────────────────────────────────────
+  // ── Guardar nueva contraseña ───────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -85,26 +124,28 @@ export default function ResetPasswordPage() {
       const { error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) throw updateError
 
-      // Cerrar sesión temporal de recuperación y redirigir al login
       await supabase.auth.signOut()
       setPageState('success')
       setTimeout(() => router.replace('/login?reset=1'), 2000)
     } catch (err) {
-      setError(
+      const msg =
         err instanceof Error
           ? err.message
-          : 'Error al actualizar la contraseña. Intenta de nuevo.'
-      )
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Error al actualizar la contraseña. Intenta de nuevo.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  // ─── Render: checking ──────────────────────────────────────────────────────
+  // ─── Render: verificando token ─────────────────────────────────────────────
   if (pageState === 'checking') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-4">
         <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-amber-400" />
+        <p className="text-gray-500 text-sm">Verificando enlace…</p>
       </div>
     )
   }
@@ -121,7 +162,7 @@ export default function ResetPasswordPage() {
             </h2>
             <p className="text-gray-400 text-sm mb-6">
               Este enlace de recuperación ya no es válido. Los enlaces expiran
-              después de 1 hora. Solicita uno nuevo.
+              después de 1 hora o al ser usados. Solicita uno nuevo.
             </p>
             <a
               href="/auth/forgot-password"
@@ -201,6 +242,7 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoFocus
                   placeholder="Mínimo 6 caracteres"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 pr-11
                              text-white placeholder-gray-500 focus:outline-none focus:ring-2
