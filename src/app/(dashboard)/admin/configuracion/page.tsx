@@ -1,4 +1,5 @@
-﻿import ExchangeRateConfig from '@/components/config/ExchangeRateConfig'
+﻿// updated
+import ExchangeRateConfig from '@/components/config/ExchangeRateConfig'
 
 export default function ConfiguracionPage() {
   return (
@@ -8,3 +9,4 @@ export default function ConfiguracionPage() {
     </div>
   )
 }
+
