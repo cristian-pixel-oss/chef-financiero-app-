@@ -1,15 +1,15 @@
-'use client'
+﻿'use client'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * CHEF FINANCIERO — Dashboard Principal (JARVIS)
+ * CHEF FINANCIERO â€” Dashboard Principal (JARVIS)
  *
  * Layout inspirado en Excel DASH-MAY:
- *   Fila 1 — Ocupación | Ppto $/PAX | Real $/PAX
- *   Fila 2 — Ppto Total | Gasto Real | Saldo Disponible (semáforo)
- *   Tabla  — Área/Cocina | Ppto $/PAX | Ppto Total | Real Total | Real $/PAX | Excedente | % Ejec. | Estado
- *   Abajo  — Proyección al cierre del mes
+ *   Fila 1 â€” OcupaciÃ³n | Ppto $/PAX | Real $/PAX
+ *   Fila 2 â€” Ppto Total | Gasto Real | Saldo Disponible (semÃ¡foro)
+ *   Tabla  â€” Ãrea/Cocina | Ppto $/PAX | Ppto Total | Real Total | Real $/PAX | Excedente | % Ejec. | Estado
+ *   Abajo  â€” ProyecciÃ³n al cierre del mes
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -21,8 +21,9 @@ import {
   type RestaurantPeriodStat,
 } from '@/services/costs.service'
 import { DG_BUDGET_RD_PAX, DG_BUDGET_USD_PAX, DG_EXCHANGE_RATE } from '@/lib/constants'
+import { getExchangeRate } from '@/services/hotelConfig.service'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function fmtRD(n: number) {
   return new Intl.NumberFormat('es-DO', {
@@ -39,7 +40,7 @@ function fmtRD2(n: number) {
 }
 
 function fmtUSD(n: number, rate: number) {
-  if (rate <= 0) return '—'
+  if (rate <= 0) return 'â€”'
   return new Intl.NumberFormat('en-US', {
     style: 'currency', currency: 'USD',
     minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -61,7 +62,7 @@ function semaphore(pct: number): 'green' | 'yellow' | 'red' {
   return 'red'
 }
 
-// ─── Micro-componentes ────────────────────────────────────────────────────────
+// â”€â”€â”€ Micro-componentes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SemDot({ status }: { status: 'green' | 'yellow' | 'red' }) {
   const c: Record<string, string> = {
@@ -74,8 +75,8 @@ function SemDot({ status }: { status: 'green' | 'yellow' | 'red' }) {
 
 function SemBadge({ status }: { status: 'green' | 'yellow' | 'red' }) {
   const cfg: Record<string, { cls: string; label: string }> = {
-    green:  { cls: 'text-green-400 bg-green-400/10',  label: '✓ OK'      },
-    yellow: { cls: 'text-amber-400 bg-amber-400/10',  label: '~ Atención' },
+    green:  { cls: 'text-green-400 bg-green-400/10',  label: 'âœ“ OK'      },
+    yellow: { cls: 'text-amber-400 bg-amber-400/10',  label: '~ AtenciÃ³n' },
     red:    { cls: 'text-red-400   bg-red-400/10',    label: '! Alerta'   },
   }
   const { cls, label } = cfg[status]
@@ -86,7 +87,7 @@ function SemBadge({ status }: { status: 'green' | 'yellow' | 'red' }) {
   )
 }
 
-// ─── Bloque KPI grande (fila 1) ───────────────────────────────────────────────
+// â”€â”€â”€ Bloque KPI grande (fila 1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function KPITop({
   label, value, sub, note, colorClass = 'text-white', borderClass = 'border-gray-800 bg-gray-900',
@@ -108,7 +109,7 @@ function KPITop({
   )
 }
 
-// ─── Bloque KPI medio (fila 2) ────────────────────────────────────────────────
+// â”€â”€â”€ Bloque KPI medio (fila 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function KPIMid({
   label, value, sub, note, colorClass = 'text-white', borderClass = 'border-gray-800 bg-gray-900',
@@ -130,17 +131,25 @@ function KPIMid({
   )
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// â”€â”€â”€ PÃ¡gina principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function DashboardPage() {
   const today = todayStr()
 
-  // ── Estado ────────────────────────────────────────────────────────────────
+  // â”€â”€ Estado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [viewMode,     setViewMode]     = useState<'day' | 'range'>('range')
   const [selectedDate, setSelectedDate] = useState(today)
   const [startDate,    setStartDate]    = useState(firstOfMonthStr())
   const [endDate,      setEndDate]      = useState(today)
   const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
+
+  // Cargar tasa de cambio desde Supabase
+  useEffect(() => {
+    if (!hotelId) return
+    const now = new Date()
+    getExchangeRate(hotelId, now.getFullYear(), now.getMonth() + 1)
+      .then(rate => { if (rate) setExchangeRate(rate) })
+  }, [hotelId])
 
   const { hotelId, hotelName, hotelLoading } = useHotelId()
 
@@ -149,7 +158,7 @@ export default function DashboardPage() {
   const [error,        setError]        = useState<string | null>(null)
 
 
-  // ── Cargar datos ──────────────────────────────────────────────────────────
+  // â”€â”€ Cargar datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadData = useCallback(async () => {
     if (!hotelId) return
     setLoading(true)
@@ -170,7 +179,7 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Guards ────────────────────────────────────────────────────────────────
+  // â”€â”€ Guards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (hotelLoading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
@@ -183,7 +192,7 @@ export default function DashboardPage() {
     </div>
   )
 
-  // ── Derivados ─────────────────────────────────────────────────────────────
+  // â”€â”€ Derivados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ps       = periodStats
   const totalSt  = ps ? semaphore(ps.execution_pct) : 'green'
   const saldoPos = (ps?.saldo_rd ?? 0) >= 0
@@ -192,9 +201,9 @@ export default function DashboardPage() {
     ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-DO', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       })
-    : `${startDate} → ${endDate}`
+    : `${startDate} â†’ ${endDate}`
 
-  // Colores semáforo para bloques
+  // Colores semÃ¡foro para bloques
   const semBorder: Record<string, string> = {
     green:  'border-green-600/40 bg-green-900/20',
     yellow: 'border-amber-600/40 bg-amber-900/20',
@@ -206,11 +215,11 @@ export default function DashboardPage() {
     red:    'text-red-400',
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="p-6 max-w-screen-xl mx-auto space-y-5">
 
-      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -218,7 +227,7 @@ export default function DashboardPage() {
               Dashboard <span className="text-amber-400">JARVIS</span>
             </h1>
             <p className="text-gray-400 text-sm mt-0.5">
-              {hotelName || 'Control de costos'} — Control Financiero Cocina
+              {hotelName || 'Control de costos'} â€” Control Financiero Cocina
             </p>
           </div>
           <button
@@ -227,7 +236,7 @@ export default function DashboardPage() {
             className="shrink-0 text-gray-400 hover:text-white text-sm px-3 py-2
                        bg-gray-800 border border-gray-700 rounded-lg disabled:opacity-50 transition"
           >
-            ↻ Actualizar
+            â†» Actualizar
           </button>
         </div>
 
@@ -244,7 +253,7 @@ export default function DashboardPage() {
                   viewMode === m ? 'bg-amber-400 text-gray-900' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                {m === 'day' ? '📅 Día' : '📅─📅 Período'}
+                {m === 'day' ? 'ðŸ“… DÃ­a' : 'ðŸ“…â”€ðŸ“… PerÃ­odo'}
               </button>
             ))}
           </div>
@@ -265,7 +274,7 @@ export default function DashboardPage() {
                 className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2
                            text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
-              <span className="text-gray-500 text-sm">→</span>
+              <span className="text-gray-500 text-sm">â†’</span>
               <input
                 type="date" value={endDate} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
@@ -288,9 +297,9 @@ export default function DashboardPage() {
           {/* Referencia DG */}
           <div className="hidden sm:flex items-center gap-1.5 bg-green-900/30 border border-green-700/40
                           rounded-lg px-3 py-2">
-            <span className="text-green-400 text-xs">✅</span>
+            <span className="text-green-400 text-xs">âœ…</span>
             <span className="text-green-300 text-xs font-medium whitespace-nowrap">
-              Ppto DG: RD$ {DG_BUDGET_RD_PAX}/PAX · USD {DG_BUDGET_USD_PAX.toFixed(2)}/PAX
+              Ppto DG: RD$ {DG_BUDGET_RD_PAX}/PAX Â· USD {DG_BUDGET_USD_PAX.toFixed(2)}/PAX
             </span>
           </div>
         </div>
@@ -299,7 +308,7 @@ export default function DashboardPage() {
       {/* Error */}
       {error && (
         <div className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3">
-          <p className="text-red-400 text-sm">⚠ {error}</p>
+          <p className="text-red-400 text-sm">âš  {error}</p>
         </div>
       )}
 
@@ -312,7 +321,7 @@ export default function DashboardPage() {
 
       ) : !ps || ps.days_with_data === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <p className="text-gray-400 text-base">No hay datos para el período seleccionado.</p>
+          <p className="text-gray-400 text-base">No hay datos para el perÃ­odo seleccionado.</p>
           <p className="text-gray-600 text-sm mt-2">
             Ingresa pedidos en <strong className="text-gray-400">Pedidos</strong> para ver el resumen.
           </p>
@@ -321,33 +330,33 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-4">
 
-          {/* Etiqueta período + semáforo */}
+          {/* Etiqueta perÃ­odo + semÃ¡foro */}
           <div className="flex items-center gap-3 flex-wrap">
             <SemDot status={totalSt} />
             <span className="text-white font-semibold capitalize">{periodLabel}</span>
             {ps.days_with_data > 1 && (
               <span className="text-gray-500 text-xs bg-gray-800 px-2 py-0.5 rounded-full">
-                {ps.days_with_data} días con datos
+                {ps.days_with_data} dÃ­as con datos
               </span>
             )}
             <SemBadge status={totalSt} />
           </div>
 
-          {/* ══ FILA 1: Ocupación | Ppto $/PAX | Real $/PAX ══════════════════ */}
+          {/* â•â• FILA 1: OcupaciÃ³n | Ppto $/PAX | Real $/PAX â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           <div className="grid grid-cols-3 gap-4">
 
-            {/* Ocupación */}
+            {/* OcupaciÃ³n */}
             <KPITop
-              label="Ocupación"
+              label="OcupaciÃ³n"
               value={`${fmtRD(ps.total_pax)} PAX`}
-              sub={ps.days_with_data > 1 ? `${ps.days_with_data} días` : undefined}
+              sub={ps.days_with_data > 1 ? `${ps.days_with_data} dÃ­as` : undefined}
             />
 
-            {/* Presupuesto $/PAX — valor fijo DG */}
+            {/* Presupuesto $/PAX â€” valor fijo DG */}
             <KPITop
               label="Presupuesto $/PAX"
               value={`RD$ ${fmtRD2(DG_BUDGET_RD_PAX)}`}
-              note="Aprobado Dirección General"
+              note="Aprobado DirecciÃ³n General"
               colorClass="text-blue-300"
             />
 
@@ -361,7 +370,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* ══ FILA 2: Ppto Total | Gasto Real | Saldo ══════════════════════ */}
+          {/* â•â• FILA 2: Ppto Total | Gasto Real | Saldo â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           <div className="grid grid-cols-3 gap-4">
 
             {/* Presupuesto Total */}
@@ -381,7 +390,7 @@ export default function DashboardPage() {
             <KPIMid
               label="Saldo Disponible"
               value={`${saldoPos ? '+' : ''}RD$ ${fmtRD(ps.saldo_rd)}`}
-              note={saldoPos ? '✓ Dentro del presupuesto' : '⚠ Excede el presupuesto'}
+              note={saldoPos ? 'âœ“ Dentro del presupuesto' : 'âš  Excede el presupuesto'}
               colorClass={saldoPos ? 'text-green-400' : 'text-red-400'}
               borderClass={saldoPos
                 ? 'border-green-600/50 bg-green-900/20'
@@ -389,14 +398,14 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* ══ FILA 3: Descargos | Costo Neto | RD$/PAX Neto ════════════════ */}
+          {/* â•â• FILA 3: Descargos | Costo Neto | RD$/PAX Neto â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {(ps.descargos_rd > 0 || true) && (
             <div className="grid grid-cols-3 gap-4">
 
               {/* Descargos */}
               <KPIMid
                 label="Descargos"
-                value={ps.descargos_rd > 0 ? `−RD$ ${fmtRD(ps.descargos_rd)}` : 'RD$ 0'}
+                value={ps.descargos_rd > 0 ? `âˆ’RD$ ${fmtRD(ps.descargos_rd)}` : 'RD$ 0'}
                 colorClass={ps.descargos_rd > 0 ? 'text-cyan-400' : 'text-gray-500'}
                 borderClass={ps.descargos_rd > 0 ? 'border-cyan-700/40 bg-cyan-900/10' : 'border-gray-800 bg-gray-900'}
               />
@@ -420,13 +429,13 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ══ TABLA POR RESTAURANTE ════════════════════════════════════════ */}
+          {/* â•â• TABLA POR RESTAURANTE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {ps.restaurants.length > 0 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
 
               <div className="px-4 py-2.5 border-b border-gray-800 flex items-center justify-between">
-                <h3 className="text-white font-semibold text-sm">Desglose por Área / Cocina</h3>
-                <span className="text-xs text-gray-500">{ps.restaurants.length} áreas</span>
+                <h3 className="text-white font-semibold text-sm">Desglose por Ãrea / Cocina</h3>
+                <span className="text-xs text-gray-500">{ps.restaurants.length} Ã¡reas</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -435,7 +444,7 @@ export default function DashboardPage() {
                     <tr style={{ backgroundColor: '#1a2436', borderBottom: '1px solid #374151' }}>
                       <th className="text-left text-gray-400 font-medium px-2 py-2 whitespace-nowrap"
                           style={{ width: 140, minWidth: 140, maxWidth: 140 }}>
-                        Área / Cocina
+                        Ãrea / Cocina
                       </th>
                       <th className="text-right text-gray-400 font-medium px-2 py-2 whitespace-nowrap">
                         $/PAX
@@ -480,33 +489,33 @@ export default function DashboardPage() {
                             {r.restaurant_name}
                           </td>
                           <td className="px-2 py-1 text-right text-gray-400 tabular-nums">
-                            {r.budget_rd_pax > 0 ? fmtRD2(r.budget_rd_pax) : <span className="text-gray-600">—</span>}
+                            {r.budget_rd_pax > 0 ? fmtRD2(r.budget_rd_pax) : <span className="text-gray-600">â€”</span>}
                           </td>
                           <td className="px-2 py-1 text-right text-gray-300 tabular-nums">
-                            {hasBudg ? fmtRD(r.budget_total_rd) : <span className="text-gray-600">—</span>}
+                            {hasBudg ? fmtRD(r.budget_total_rd) : <span className="text-gray-600">â€”</span>}
                           </td>
                           <td className="px-2 py-1 text-right text-white font-semibold tabular-nums">
                             {fmtRD(r.total_rd)}
                           </td>
                           <td className="px-2 py-1 text-right tabular-nums">
                             {r.descargos_rd > 0 ? (
-                              <span className="text-cyan-400 font-semibold">−{fmtRD(r.descargos_rd)}</span>
+                              <span className="text-cyan-400 font-semibold">âˆ’{fmtRD(r.descargos_rd)}</span>
                             ) : (
-                              <span className="text-gray-700">—</span>
+                              <span className="text-gray-700">â€”</span>
                             )}
                           </td>
                           <td className="px-2 py-1 text-right font-bold tabular-nums text-amber-300">
                             {fmtRD(r.net_total_rd)}
                           </td>
                           <td className="px-2 py-1 text-right text-gray-400 tabular-nums">
-                            {r.cost_per_pax_rd > 0 ? fmtRD2(r.cost_per_pax_rd) : '—'}
+                            {r.cost_per_pax_rd > 0 ? fmtRD2(r.cost_per_pax_rd) : 'â€”'}
                           </td>
                           <td className={`px-2 py-1 text-right font-semibold tabular-nums ${
                             !hasBudg ? 'text-gray-600'
                             : excPos  ? 'text-green-400'
                             : 'text-red-400'
                           }`}>
-                            {hasBudg ? `${excPos ? '+' : ''}${fmtRD(r.excedente_rd)}` : '—'}
+                            {hasBudg ? `${excPos ? '+' : ''}${fmtRD(r.excedente_rd)}` : 'â€”'}
                           </td>
                           <td className="px-2 py-1 text-center">
                             {hasBudg ? (
@@ -514,7 +523,7 @@ export default function DashboardPage() {
                                 {fmtPct(r.execution_pct)}
                               </span>
                             ) : (
-                              <span className="text-gray-600">—</span>
+                              <span className="text-gray-600">â€”</span>
                             )}
                           </td>
                           <td className="px-2 py-1 text-center">
@@ -533,7 +542,7 @@ export default function DashboardPage() {
                         TOTAL
                       </td>
                       <td className="px-2 py-1.5 text-right text-gray-300 tabular-nums font-semibold">
-                        {ps.total_pax > 0 ? fmtRD2(ps.budget_rd_pax) : '—'}
+                        {ps.total_pax > 0 ? fmtRD2(ps.budget_rd_pax) : 'â€”'}
                       </td>
                       <td className="px-2 py-1.5 text-right text-gray-200 tabular-nums font-bold">
                         {fmtRD(ps.budget_total_rd)}
@@ -543,9 +552,9 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums font-bold">
                         {ps.descargos_rd > 0 ? (
-                          <span className="text-cyan-400">−{fmtRD(ps.descargos_rd)}</span>
+                          <span className="text-cyan-400">âˆ’{fmtRD(ps.descargos_rd)}</span>
                         ) : (
-                          <span className="text-gray-600">—</span>
+                          <span className="text-gray-600">â€”</span>
                         )}
                       </td>
                       <td className="px-2 py-1.5 text-right text-amber-300 tabular-nums font-bold">
@@ -577,3 +586,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
