@@ -20,6 +20,8 @@ import { supabase }          from '@/lib/supabase/client'
 import { useAuth }           from '@/hooks/useAuth'
 import { upsertFoodOrder, getOccupancy, upsertOccupancy } from '@/services/costs.service'
 import { DG_EXCHANGE_RATE }  from '@/lib/constants'
+import { getExchangeRate } from '@/services/hotelConfig.service'
+import { useHotelId } from '@/hooks/useHotelId'
 import type { Restaurant, DailyFoodOrderInsert } from '@/types/database.types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -92,6 +94,12 @@ export default function CostsPage() {
 
   // Tasa de cambio (editable, default = tasa DG)
   const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
+  const { hotelId } = useHotelId()
+  useEffect(() => {
+    if (!hotelId) return
+    const now = new Date()
+    getExchangeRate(hotelId, now.getFullYear(), now.getMonth() + 1).then(rate => { if (rate) setExchangeRate(rate) })
+  }, [hotelId])
 
   // ALM rows
   const [rows, setRows] = useState<Record<string, RowState>>({})
