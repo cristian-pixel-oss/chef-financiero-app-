@@ -20,6 +20,7 @@ import {
   deleteDescargo,
 } from '@/services/descargos.service'
 import { DG_EXCHANGE_RATE } from '@/lib/constants'
+import { getExchangeRate }  from '@/services/hotelConfig.service'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,14 @@ export default function DescargosPage() {
   const [assignToRestId,   setAssignToRestId]   = useState('')
   const [distMode,         setDistMode]         = useState<'prop' | 'one' | null>(null)
   const [distributing,     setDistributing]     = useState(false)
+
+  // ── Cargar tasa de cambio desde Supabase ──────────────────────────────────
+  useEffect(() => {
+    if (!hotelId) return
+    const now = new Date()
+    getExchangeRate(hotelId, now.getFullYear(), now.getMonth() + 1)
+      .then(rate => { if (rate) setExchangeRate(rate) })
+  }, [hotelId])
 
   // ── Init usuario ──────────────────────────────────────────────────────────
   useEffect(() => {

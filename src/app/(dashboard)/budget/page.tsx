@@ -41,13 +41,20 @@ interface RestaurantBudget {
 export default function BudgetPage() {
   const now = new Date()
 
-  const [year,    setYear]    = useState(now.getFullYear())
-  const [month,   setMonth]   = useState(now.getMonth() + 1)
+  const [year,         setYear]         = useState(now.getFullYear())
+  const [month,        setMonth]        = useState(now.getMonth() + 1)
   const { hotelId, hotelLoading } = useHotelId()
-  const [userId,  setUserId]  = useState('')
-  const [data,    setData]    = useState<RestaurantBudget[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState<string | null>(null)
+  const [userId,       setUserId]       = useState('')
+  const [data,         setData]         = useState<RestaurantBudget[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState<string | null>(null)
+  const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
+
+  // ── Cargar tasa de cambio desde Supabase ──────────────────────────────────────
+  useEffect(() => {
+    if (!hotelId) return
+    getExchangeRate(hotelId, year, month).then(rate => { if (rate) setExchangeRate(rate) })
+  }, [hotelId, year, month])
 
   // Edición inline
   const [editValues, setEditValues] = useState<Record<string, string>>({})
@@ -313,7 +320,7 @@ export default function BudgetPage() {
             <div className="text-center">
               <p className="text-xs text-gray-500">Tasa ref.</p>
               <p className="text-gray-400 font-semibold text-sm tabular-nums">
-                {DG_EXCHANGE_RATE.toFixed(2)} RD$/USD
+                {exchangeRate.toFixed(2)} RD$/USD
               </p>
             </div>
           </div>
