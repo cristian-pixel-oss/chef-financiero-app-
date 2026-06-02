@@ -104,10 +104,7 @@ export default function CostsPage() {
   // ALM rows
   const [rows, setRows] = useState<Record<string, RowState>>({})
 
-  // hotelId y userId se derivan del perfil cargado por useAuth
-  // (profiles.hotel_id es la forma correcta de vincular usuarios a hoteles)
-  const hotelId = profile?.hotel_id ?? ''
-  const userId  = user?.id          ?? ''
+  const userId  = user?.id ?? ''
 
   // Estado de carga
   const [loading,    setLoading]    = useState(true)

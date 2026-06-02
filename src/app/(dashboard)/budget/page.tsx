@@ -14,7 +14,6 @@ import { supabase }    from '@/lib/supabase/client'
 import { useHotelId }  from '@/hooks/useHotelId'
 import { DG_BUDGET_RD_PAX, DG_BUDGET_USD_PAX, DG_EXCHANGE_RATE } from '@/lib/constants'
 import { getExchangeRate } from '@/services/hotelConfig.service'
-import { useHotelId } from '@/hooks/useHotelId'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
