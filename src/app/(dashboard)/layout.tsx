@@ -89,20 +89,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </a>
           )}
 
-          {/* Presupuesto — todos los roles */}
-          <a
-            href="/budget"
-            className={`flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl
-                       text-sm font-medium transition-all duration-200
-                       ${pathname === '/budget'
-                         ? 'bg-amber-400/15 text-amber-400 border border-amber-400/20'
-                         : 'text-gray-400 hover:text-white hover:bg-gray-800 border border-transparent'
-                       }`}
-          >
-            <span className="text-base">📊</span>
-            Presupuesto
-          </a>
-
           {/* Usuarios — solo admin */}
           {isAdmin && (
             <a

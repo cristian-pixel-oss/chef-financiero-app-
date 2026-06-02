@@ -15,9 +15,13 @@ export async function getExchangeRate(hotelId: string, year: number, month: numb
     .eq('hotel_id', hotelId)
     .eq('year', year)
     .eq('month', month)
-    .single()
+    .maybeSingle()
 
-  if (error || !data) return 59.74
+  if (error) {
+    console.error('[getExchangeRate] Error:', error.message, { hotelId, year, month })
+    return 59.74
+  }
+  if (!data) return 59.74
   return Number(data.exchange_rate)
 }
 
