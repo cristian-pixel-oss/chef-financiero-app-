@@ -143,6 +143,8 @@ export default function DashboardPage() {
   const [endDate,      setEndDate]      = useState(today)
   const [exchangeRate, setExchangeRate] = useState(DG_EXCHANGE_RATE)
 
+
+  const { hotelId, hotelName, hotelLoading } = useHotelId()
   // Cargar tasa de cambio desde Supabase
   useEffect(() => {
     if (!hotelId) return
@@ -150,8 +152,6 @@ export default function DashboardPage() {
     getExchangeRate(hotelId, now.getFullYear(), now.getMonth() + 1)
       .then(rate => { if (rate) setExchangeRate(rate) })
   }, [hotelId])
-
-  const { hotelId, hotelName, hotelLoading } = useHotelId()
 
   const [periodStats,  setPeriodStats]  = useState<PeriodSummary | null>(null)
   const [loading,      setLoading]      = useState(true)
@@ -586,5 +586,6 @@ export default function DashboardPage() {
     </div>
   )
 }
+
 
 
